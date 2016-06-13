@@ -1,0 +1,268 @@
+---
+title: "CorrelationBTWNshapeANDmovement"
+author: "ryamada"
+date: "Friday, June 03, 2016"
+output: html_document
+---
+
+# 形とその時間変化(変形)と速度とその時間変化(加速度)
+
+形・変形・速度・加速度を調べるときに、力学的に調べることも可能ですが、それは力学屋さんに任せることとし、
+僕らは、形・変形・速度・加速度を代表すると思われる、特徴量の相関を調べたいと思います。
+
+この文書は、それをやるにあたっての、処理フロー(のようなもの)です。
+
+# 形
+
+- ボクセル情報
+
+↓　(待ち)
+
+- セグメンテーション
+
+↓　(目途、ついた)
+
+- 三角形メッシュ
+
+↓　Spin transformation(ほぼ済み)
+
+- 正球
+
+正球上に張り付いた三角形メッシュ(三角形の集合とその連結具合)と、各三角形がオリジナルの形だったときの属性情報(位置座標、曲率、三角形としての面積)として保持している。
+
+# 変形
+
+
+この処理は、最終的にはC++化するかもしれないけれど、Rのベクトル演算でできるレベルかと予想する。
+
+
+変形は、２つの形の対応をとり、そのうえで、対応する点と微小面(無限個あるが、近似する)とがどのように動くかの総合としてとらえる。
+
+２つの形の対応の取り方は、２つの属性情報付きの正球から、正球上均一点とその属性情報を取り出し、属性情報がなるべく一致するような原点中心の回転を探すことで達成する。
+
+
+- 正球上の任意の点の属性情報割り付け
+
+(i) 正球上に、適当な密度で均一な点集合を取る(http://d.hatena.ne.jp/ryamada/20150406/1428009914 とかでよい)。
+
+(ii) 各点にオリジナルの形だったときの属性情報を付与する。方法としては、(a) 帰属する三角形の属性からの補間、(b)球面調和関数分解をして、そこから計算。(a)でたぶん大丈夫。
+
+↓
+
+- 時間差のある２つの正球の対応付け
+
+正球の属性情報としては、オリジナルの形の平均曲率を用いて、「なるべく一致」は最小二乗和とする。各点のオリジナルの形における面積での重みづけなども気になるが、ひとまずは、無視してやってみる。回転行列を赤道面での回転角と緯度に関する回転角との２パラメタで定めることで、2パラメタのoptim()最適化で解けるのではないかと思う。
+
+この回転情報は、(変形を伴わない)細胞の回転という動きに対応する。この回転以外の動きは、重心の移動とその他に分け、「その他」を変形と考える。
+
+- 重心の移動
+
+ボクセル情報から、重心座標は出る。その差分を重心の移動とする。
+
+-変形の評価・定量
+
+
+大まかには、細胞表面全体について、ある方向を向いていた微小面が、次の時刻に別の方向を向いていたという情報の塊として取り出す。
+
+微小面の方向(法線ベクトル)とその変化は、重心と重心の移動ベクトルとの相対位置関係での評価が必要になる(と思われる)。
+
+# 重心の速度と加速度
+
+重心座標が単位時間ごとに変化しているとき、1階差分が速度、2階差分が加速度。
+
+加速度ベクトルは、速度方向成分(等方向加速成分)と、それに直交する成分(方向変更成分)とに分けて評価する。
+
+移動曲線の評価については、末尾の『参考：曲線とフルネ=セレ』も参考に。
+
+# 形・変形 vs. 速度・加速度
+
+次の４つの問いがあります。
+
+- 動く方向と形との関係はどうなっているのか？
+
+- 加速度の方向と形との関係はどうなっているのか？
+
+- 動く方向と変形との関係はどうなっているのか？
+
+- 加速度の方向と変形との関係はどうなっているのか？
+
+## 動く方向と形との関係
+
+- 特定方向を特別扱いする。細胞表面の法線ベクトル分布(三角形の法線について、その面積で重みを付ける)を、速度ベクトル方向成分と、その直交成分とに分解する。
+
+- 形と向きとが無関係であるならば、速度ベクトル方向成分とその直交成分とへの分解は、パーミュテーションして得られた分解比の分布に照らして、際立たない。
+
+- 重心と通り、速度ベクトル方向を向いた直線を、この細胞の軸としたときに、細胞の局所面の、この軸からの距離が寄与していることを評価に組み込むことも必要となるように予想する。この距離を重みとして使う。
+
+-　形と向きとが関係あるものの、速度の大きさに依存するかどうかは、2成分への分解具合を速度ベクトルの大きさとの関係を見ればよい。
+
+- 速度ベクトルに対する直交成分は、その大きさだけを問題にすることもできるが、速度ベクトルに垂直な平面上のベクトルとして評価することも必要。偏りがないのかあるのか、など。
+
+
+## それ以外の３つの関係
+
+考え方は、「動く方向」と「形」との関係と同じ。対応するベクトルを取りかえればよい。
+
+## 複合的な関係
+
+上述したのは、形と変形、速度と加速度、の４要素を２群に分けて、ペアワイズで考慮した。
+
+加速度を考えるときに速度の大きさが影響するのか、とか、
+
+形と変形との両方を併せて説明変数とするのか、などの複合評価も、先々では考慮。
+# 参考：曲線とフルネ=セレ
+
+少し詳しく言うと、重心の移動線が作る線にそって、Moving frameという座標系を貼り付けて、考えるのがよい。移動線に沿って座標系を貼り付けると、観察している座標系の取り方に依存しないで評価できるから…　http://d.hatena.ne.jp/ryamada22/20080922 
+
+雑なソース：
+
+```{r}
+my.vector.0 <- function(x){
+  ret.v <- matrix(0,length(x[,1]),length(x[1,]))
+	L <- sqrt(apply(x^2,1,sum))
+	zeros <- which(L==0)
+	non.zeros <- which(L!=0)
+	if(length(zeros)==length(L)){
+		ret.v[,1] <- 1
+		return(list(v=ret.v,L=L))
+	}
+	ret.v <- x
+	ret.v[non.zeros,] <- ret.v[non.zeros,]/L[non.zeros]
+	if(length(zeros)>0){
+		min.nonzero <- min(non.zeros)
+		max.nonzero <- max(non.zeros)
+		tmp.v <- rbind(ret.v[min.nonzero,],ret.v,ret.v[max.nonzero,])
+		tmp.L <- c(1,L,1)
+		
+		zero.diff <- diff(tmp.L==0)
+		ones <- which(zero.diff==1)
+		negones <- which(zero.diff==-1)
+		for(i in 1:length(zeros)){
+			ii <- zeros[i]
+			tmp.pre <- max(which(ones < ii+1))
+			tmp.post <- min(which(negones > ii))
+			
+			f.pre <- ii+1-ones[tmp.pre]
+			f.post <- negones[tmp.post]-ii
+			
+			ret.v[ii,] <- f.post/(f.pre+f.post) * tmp.v[ones[tmp.pre],] + f.pre/(f.pre+f.post) * tmp.v[negones[tmp.post]+1,]
+			tmp.l <- sqrt(sum(ret.v[ii,]^2))
+			if(tmp.l == 0){
+				ret.v[ii,] <- ret.v[ii-1,]
+			}else{
+				ret.v[ii,] <- ret.v[ii,]/sqrt(sum(ret.v[ii,]^2))
+			}
+			
+		}
+	}
+
+	return(list(v=ret.v,L=L))
+}
+
+
+my.discrete.curve <- function(x){
+	dx <- matrix(apply(x,2,diff),ncol=length(x[1,]))
+	ddx <- matrix(apply(dx,2,diff),ncol=length(x[1,]))
+	dddx <- matrix(apply(ddx,2,diff),ncol=length(x[1,]))
+	
+	s3 <- 1:length(dddx[,1])
+	s2 <- 1:(length(ddx[,1])-1)
+	s1 <- 2:(length(dx[,1])-1)
+	s0 <- 2:(length(x[,1])-2)
+	
+	X1 <- dx[s1,]
+	X2 <- ddx[s2,]
+	X3 <- dddx[s3,]
+	
+	X1. <- my.vector.0(X1)
+	X2. <- my.vector.0(X2)
+	X3. <- my.vector.0(X3)
+	
+	X1.v <- X1.$v
+	X1.L <- X1.$L
+	X2.v <- X2.$v
+	X2.L <- X2.$L
+	X3.v <- X3.$v
+	X3.L <- X3.$L
+
+	ip.X1.X2 <- apply(X1.v * X2.v,1,sum)
+	
+	X2.para <- X1.v * ip.X1.X2
+	X2.orth <- X2.v - X2.para
+	L2.orth <- sqrt(apply(X2.orth^2,1,sum))
+	X2.orth.st <- X2.orth/L2.orth
+	
+
+	ip.X1.X3 <- apply(X1.v*X3.v,1,sum)
+	ip.X2.X3 <- apply(X2.orth.st * X3.v,1,sum)
+	
+	X3.para1 <- X1.v * ip.X1.X3
+	X3.para2 <- X2.orth.st * ip.X2.X3
+	X3.orth <- X3.v - X3.para1 - X3.para2
+	L3.orth <- sqrt(apply(X3.orth^2,1,sum))
+	X3.orth.st <- X3.orth/L3.orth
+	
+	coef1 <- coef2 <- coef3 <- X1
+	coef1[,1] <- 1
+	coef1[,2:3] <- 0
+	
+	coef2[,1] <- ip.X1.X2
+	coef2[,2] <- L2.orth
+	coef2[,3] <- 0
+	
+	coef3[,1] <- ip.X1.X3
+	coef3[,2] <- ip.X2.X3
+	coef3[,3] <- L3.orth
+	
+	tmp <- array(0,c(length(X1[,1]),3,3))
+	for(i in 1:length(X1[,1])){
+		tmp.m <- cbind(X1.v[i,],X2.orth.st[i,],X3.orth.st[i,])
+		tmp.dx <- cbind(X1[i,],X2[i,],X3[i,])
+		tmp[i,,] <- t(tmp.m) %*% tmp.dx
+
+		
+	}
+	
+	
+	return(list(dx = list(X1,X2,X3),dx.vL=list(X1.,X2.,X3.),mv.fr = list(X1.v,X2.orth.st,X3.orth.st),v.mf=tmp,coef = list(coef1,coef2,coef3)))
+}
+
+# moving frame: mv.fr
+# moving frame成分分解した、速度・加速度・加速度の変化
+
+
+t <- seq(from=0,to=1,length=1000)*3*pi
+
+xx <- sin(t)
+yy <- t*cos(t)
+zz <- t^2 * sin(t)
+x <- cbind(xx,yy,zz)
+x <- x + rnorm(length(x),0,10^(-2))
+#x[,3] <- 0
+out <-　out2 <- my.discrete.curve(x)
+
+plot(out$v.mf[,1,1],type="l")
+plot(out$v.mf[,1,2],type="l")
+plot(out$v.mf[,2,2],type="l")
+plot(out$v.mf[,1,3],type="l")
+plot(out$v.mf[,2,3],type="l")
+plot(out$v.mf[,3,3],type="l")
+
+
+k <-40 
+tmp.m <- cbind(out2$mv.fr[[1]][k,],out2$mv.fr[[2]][k,],out2$mv.fr[[3]][k,])
+tmp.dx <- cbind(out2$dx[[1]][k,],out2$dx[[2]][k,],out2$dx[[3]][k,])
+round(t(tmp.m) %*% tmp.dx,5)
+
+
+tmp.coef <- cbind(out2$coef[[1]][k,],out2$coef[[2]][k,],out2$coef[[3]][k,])
+
+tmp.m %*% t(tmp.coef)
+
+out2$dx[[1]][k,]
+out2$dx[[2]][k,]
+out2$dx[[3]][k,]
+```
+
+
+
