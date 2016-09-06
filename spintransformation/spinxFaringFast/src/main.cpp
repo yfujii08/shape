@@ -38,12 +38,19 @@ int main( int argc, char **argv )
    for(int i=0;i<n;i++){
      app.process(step,meshY);
      std::ostringstream os;
-     os << argv[4] << i << ".obj";
+     os << argv[4] << i+1 << ".obj";
      std::string name=os.str();
      meshY.write(name);
      counter += 1;
    }
 
+   std::vector<double> data(meshY.vertices.size(), 0.28209479177387814);  // 0.28209479177387814 // 1/2/sqrt(pi)
+   std::vector<double> coef = meshY.SH_innerProduct(30);//, &data=rho);
+   std::ofstream ofs("coef.txt");
+   for (auto c : coef)
+   {
+      ofs << c << " ";
+   }
 
    return 0;
 }

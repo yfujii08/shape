@@ -1,9 +1,9 @@
 f = "/home/yosukefujii/Desktop/par.txt"
-outwd = "/home/yosukefujii/Desktop/par/"
+outwd = "/home/yosukefujii/Desktop/par1/"
 import os
 g = open(f, "rU")
 
-pars = ["gcv", "gcf", "rhov", "rhof", "lambda", "mcn", "area", "vol", "rho"]
+pars = ["gcv", "gcf", "rhov", "rhof", "lambda", "mcn", "area", "vol"]
 out = 0
 w0 = map(lambda x: open(outwd+"out"+str(out)+"_"+x+".txt", "w"), pars)
 for line in g:

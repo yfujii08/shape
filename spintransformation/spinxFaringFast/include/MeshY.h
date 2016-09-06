@@ -83,6 +83,10 @@ class Mesh
 
       vector<double> returnRho( void);
 
+      //std::vector<double> SH_innerProduct(int n_coef, const std::vector<double> &data) const;
+
+      std::vector<double> SH_innerProduct(int n_coef) const; //, const std::vector<double> &data) const;
+
 
    protected:
 
